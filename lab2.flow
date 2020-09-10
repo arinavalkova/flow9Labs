@@ -1,0 +1,14 @@
+import runtime;
+import string;
+
+function(mas : [int]) -> int
+{
+    b = fold(mas, 0, \x, y -> x + y);
+    b;
+} 
+
+main()
+{
+    mas = [1, 2, 3];
+    println(function(mas));
+}
