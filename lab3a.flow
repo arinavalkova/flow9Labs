@@ -1,0 +1,24 @@
+import runtime;
+import string;
+
+fib(n : int) -> [int]
+{
+    if(n == 1)
+    {
+        [0];
+    }
+    else if(n == 2)
+    {
+         [0, 1];
+    }
+    else 
+    {
+        a = fib(n - 1);
+        concat(a, [a[n - 2] + a[n - 3]]);
+    }
+} 
+
+main()
+{
+    println(fib(10));
+}
