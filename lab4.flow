@@ -45,5 +45,6 @@ inds2(a : [int], m : int) -> [Pair<int, int>]{
 
 main(){
     a = [1, 2, 3, 1, 2, 3];
+    println(inds1(a, 3));
     println(inds2(a, 3));
 }
