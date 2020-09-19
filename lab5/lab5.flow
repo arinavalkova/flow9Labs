@@ -1,0 +1,16 @@
+import lingo/pegcode/driver;
+
+gram = "#include gr.lingo"
+
+NumTree ::= NumNode, NumLeaf;
+  NumNode(l: NumTree, op: string, r: NumTree);
+  NumLeaf(n: int);
+
+s2numtree(str: string) -> NumTree {
+  parsic(compilePegGrammar(gram), str, defaultPegActions)
+}
+
+main() {
+  t = s2numtree("( ( (2 * 6) * 2 ) + 1 )");
+  println(t);
+}
