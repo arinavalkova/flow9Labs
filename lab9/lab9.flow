@@ -1,6 +1,6 @@
 import lingo/pegcode/driver;
 
-gram = "#include lab8.lingo"
+gram = "#include lab9.lingo"
 
 VarTree ::= VarNode, Number, Variable;
   VarNode(l: VarTree, op: string, r: VarTree);
