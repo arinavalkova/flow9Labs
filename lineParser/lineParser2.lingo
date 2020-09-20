@@ -1,0 +1,4 @@
+line = word+:c{ Str(:c) };
+word = char+$c ws {$c};
+char = 'a'-'z' | '0'-'9';
+ws = " "*;
