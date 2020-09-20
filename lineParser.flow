@@ -1,0 +1,24 @@
+import lingo/pegcode/driver;
+
+gram = "#include lineParser.lingo"
+
+StrArr ::= StrCat, Str;
+	StrCat: (e1: StrArr, e2: StrArr);
+	Str: (i: string);
+
+s2Arr(str: string) -> StrArr{
+    parsic(compilePegGrammar(gram), str, defaultPegActions)
+}
+
+Arr2s(arr: StrArr) -> string{
+    switch(arr){
+        StrCat(e1, e2): Arr2s(e1) + " " + Arr2s(e2);
+        Str(i): i;
+    }
+}
+
+main(){
+    arr = s2Arr("hello2 1 my 2 name 3 is 4 arina 5");
+    println(arr);
+    println(Arr2s(arr));
+}
