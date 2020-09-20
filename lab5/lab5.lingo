@@ -5,4 +5,4 @@ number = digit+$d ws { Number(s2i($d)) };
 digit = '0' - '9';
 char = digit | 'a' - 'z';
 ws = ' '*;
-opeartion = '*' | '-' | '+' | '/' | '%' | '^';
+opeartion = '*' | '-' | '+';
