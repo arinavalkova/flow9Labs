@@ -1,24 +1,26 @@
 import lingo/pegcode/driver;
 
-gram = "#include gr.lingo"
+gram = "#include lab5.lingo"
 
-NumTree ::= NumNode, NumLeaf;
-  NumNode(l: NumTree, op: string, r: NumTree);
-  NumLeaf(n: int);
+VarTree ::= VarNode, Variable, Number;
+  VarNode(l: VarTree, op: string, r: VarTree);
+  Variable(var: string);
+  Number(num: int);
 
-s2numTree(str: string) -> NumTree {
+s2numtree(str: string) -> VarTree{
   parsic(compilePegGrammar(gram), str, defaultPegActions)
 }
 
-numTree2s(tree: NumTree) -> string{
+numTree2s(tree: VarTree) -> string{
     switch (tree) {
-        NumNode(l, op, r): "(" + numTree2s(l) + op + numTree2s(r) + ")";
-        NumLeaf(val): i2s(val);
+        VarNode(l, op, r): "(" + numTree2s(l) + op + numTree2s(r) + ")";
+        Number(val): i2s(val);
+        Variable(val): val;
     }
 }
 
 main() {
-  t = s2numTree("( ( (2 * 6) * 2 ) + 1 )");
+  t = s2numtree("((a+2)+3)");
   println(t);
   println(numTree2s(t));
 }
