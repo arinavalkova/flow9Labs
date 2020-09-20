@@ -1,0 +1,78 @@
+import lingo/pegcode/driver;
+
+gram = "#include lab8.lingo"
+
+VarTree ::= VarNode, Number, Variable;
+  VarNode(l: VarTree, op: string, r: VarTree);
+  Number(num: double);
+  Variable(var: string);
+
+operation(l: double, op: string, r: double) -> double{
+    if(op == "+"){
+        l + r
+    }
+    else if(op == "-"){
+        l - r
+    }
+    else if(op == "*"){
+        l * r
+    }
+    else if(op == "/"){
+        l / r
+    }
+    else if(op == "%"){
+        l % r
+    }
+    else if(op == "^"){
+        dpow(l, r)
+    }
+    else{
+        0.0;
+    }
+}
+
+s2varTree(str: string) -> VarTree{
+  parsic(compilePegGrammar(gram), str, defaultPegActions)
+}
+
+varTree2s(tree: VarTree) -> string{
+    switch (tree) {
+        VarNode(l, op, r): "(" + varTree2s(l) + op + varTree2s(r) + ")";
+        Number(val): d2s(val);
+        Variable(var): var;
+    }
+}
+
+varTree2iNum(tree: VarTree) -> double{
+    switch(tree){
+        VarNode(l, op, r): operation(varTree2iNum(l), op, varTree2iNum(r));
+        Number(val): val;
+        Variable(var): 0.0;
+    }
+}
+
+varTree2iVariable(tree: VarTree, vars : Tree<string, double>) -> double{
+    switch(tree){
+        VarNode(l, op, r): operation(varTree2iVariable(l, vars), op, varTree2iVariable(r, vars));
+        Number(val): val;
+        Variable(var): {
+            switch(lookupTree(vars, var)){
+                Some(val): val;
+                None(): 0.0;
+            }
+        }
+    }
+}
+
+main() {
+  line = getUrlParameter("line");
+  varsTree = fold(getAllUrlParametersArray(), makeTree(), \tree, var ->{
+      if(var[0] == "line")
+          tree
+      else
+          setTree(tree, var[0], s2d(var[1]))
+  });
+  t = s2varTree(line);
+  println(t);
+  println(varTree2iVariable(t, varsTree));
+}
