@@ -1,0 +1,47 @@
+import lingo/pegcode/driver;
+
+gram = "#include lab5.lingo"
+
+VarTree ::= VarNode, Number;
+  VarNode(l: VarTree, op: string, r: VarTree);
+  Number(num: int);
+
+operation(l: int, op: string, r: int) ->int{
+    if(op == "+"){
+        l + r
+    }
+    else if(op == "-"){
+        l - r
+    }
+    else if(op == "*"){
+        l * r
+    }
+    else{
+        0;
+    }
+}
+
+s2varTree(str: string) -> VarTree{
+  parsic(compilePegGrammar(gram), str, defaultPegActions)
+}
+
+varTree2s(tree: VarTree) -> string{
+    switch (tree) {
+        VarNode(l, op, r): "(" + varTree2s(l) + op + varTree2s(r) + ")";
+        Number(val): i2s(val);
+    }
+}
+
+varTree2d(tree: VarTree) -> int{
+    switch(tree){
+        VarNode(l, op, r): operation(varTree2d(l), op, varTree2d(r));
+        Number(val): val;
+    }
+}
+
+main() {
+  t = s2varTree("((1*(3+4))+3)");
+  println(t);
+  println(varTree2s(t));
+  println(varTree2d(t));
+}
