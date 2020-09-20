@@ -1,0 +1,22 @@
+import lingo/pegcode/driver;
+
+gram = "#include test.lingo"
+
+StrArr ::= Str;
+	Str: (i: [string]);
+
+s2Arr(str: string) -> StrArr{
+    parsic(compilePegGrammar(gram), str, defaultPegActions)
+}
+
+Arr2s(arr: StrArr) -> string{
+    switch(arr){
+        Str(i): strGlue(i, " ");
+    }
+}
+
+main(){
+    arr = s2Arr("hello2 1 my 2 name 3 is 4 arina 5");
+    println(arr);
+    println(Arr2s(arr));
+}
