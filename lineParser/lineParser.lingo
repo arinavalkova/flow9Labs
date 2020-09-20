@@ -1,0 +1,4 @@
+line = word:e1 ws+ line:e2 { StrCat(:e1, :e2) } | word;
+word = char+ $s { Str($s) };
+char = 'a'-'z' | '0'-'9';
+ws = " ";
