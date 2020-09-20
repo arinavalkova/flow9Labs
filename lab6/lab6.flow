@@ -2,9 +2,8 @@ import lingo/pegcode/driver;
 
 gram = "#include lab5.lingo"
 
-VarTree ::= VarNode, Variable, Number;
+VarTree ::= VarNode, Number;
   VarNode(l: VarTree, op: string, r: VarTree);
-  Variable(var: string);
   Number(num: int);
 
 s2numtree(str: string) -> VarTree{
@@ -15,12 +14,11 @@ numTree2s(tree: VarTree) -> string{
     switch (tree) {
         VarNode(l, op, r): "(" + numTree2s(l) + op + numTree2s(r) + ")";
         Number(val): i2s(val);
-        Variable(val): val;
     }
 }
 
 main() {
-  t = s2numtree("((a+2)+3)");
+  t = s2numtree("((1+2)+3)");
   println(t);
   println(numTree2s(t));
 }
