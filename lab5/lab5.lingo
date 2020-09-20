@@ -1,7 +1,9 @@
-tree = node | leaf;
-node = "(" ws tree:l ws operation$op ws tree:r ws ")" { VarNode(:l, $op, :r) };
-leaf = char+$c { VarLeaf($c) };
+tree = node | number | variable;
+node = "(" ws tree:l ws opeartion+$op ws tree:r ws ")" { VarNode(:l, $op, :r) };
+number = digit+$d { Number(s2i($d)) };
+variable = char+$v { Variable($v) };
 
-char = '0' - '9' | 'a' - 'z';
+digit = '0' - '9';
+char = digit | 'a' - 'z';
 ws = ' '*;
-operation = '*' | '/' | '+' | '-' | '^';
+opeartion = '*' | '-' | '+' | '/' | '%' | '^';
