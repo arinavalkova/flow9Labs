@@ -2,15 +2,16 @@ import lingo/pegcode/driver;
 
 gram = "#include lab5.lingo"
 
-VarTree ::= VarNode, VarLeaf;
+VarTree ::= VarNode, Variable, Number;
   VarNode(l: VarTree, op: string, r: VarTree);
-  VarLeaf(variable: string);
+  Variable(var: string);
+  Number(num: int);
 
 s2numtree(str: string) -> VarTree{
   parsic(compilePegGrammar(gram), str, defaultPegActions)
 }
 
 main() {
-  t = s2numtree("( ( (a * 6) / 2 ) + 1 )");
+  t = s2numtree("( ( ( a ^ 6 ) / 2 ) + 1 )");
   println(t);
 }
