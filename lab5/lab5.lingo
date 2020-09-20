@@ -1,0 +1,7 @@
+tree = node | leaf;
+node = "(" ws tree:l ws operation$op ws tree:r ws ")" { VarNode(:l, $op, :r) };
+leaf = char+$c { VarLeaf($c) };
+
+char = '0' - '9' | 'a' - 'z';
+ws = ' '*;
+operation = '*' | '/' | '+' | '-' | '^';

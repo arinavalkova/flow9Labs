@@ -1,5 +1,0 @@
-tree = node | leaf;
-node = "(" " "* tree:l " "* operator$s " "* tree:r " "* ")" {NumNode(:l, $s, :r)};
-leaf = digit+ $n {NumLeaf(s2i($n))};
-digit = '0'-'9';
-operator = '*' | '/' | '+' | '-';
