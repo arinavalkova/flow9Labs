@@ -1,0 +1,9 @@
+tree = number | node | variable;
+node = '(' ws tree:l ws opeartion+$op ws tree:r ws ')' { VarNode(:l, $op, :r) };
+number = digit+$d ws { Number(s2i($d)) };
+variable = char+$c ws { Variable($c) };
+
+digit = '0' - '9';
+char = digit | 'a' - 'z';
+ws = ' '*;
+opeartion = '*' | '-' | '+' | '^' | '/' | '%';
