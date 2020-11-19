@@ -2,65 +2,79 @@ import lingo/pegcode/driver;
 
 gram = "#include lab9.lingo"
 
-VarTree ::= VarNode, Number, Variable;
+VarTree ::= VarNode, Number, Variable, Fraction;
   VarNode(l: VarTree, op: string, r: VarTree);
   Number(num: double);
   Variable(var: string);
+  Fraction(first: VarTree, second:VarTree);
 
-operation(l: double, op: string, r: double) -> double{
+operation(l: double, op: string, r: double) -> Maybe<double> {
+
     if(op == "+"){
-        l + r
+        Some(l + r)
     }
-    else if(op == "-"){
-        l - r
+    else if(op == "-") {
+        Some(l - r)
     }
-    else if(op == "*"){
-        l * r
+    else if(op == "*") {
+        Some(l * r)
     }
-    else if(op == "/"){
-        l / r
+    else if(op == "/") {
+        Some(l / r)
     }
-    else if(op == "%"){
-        l % r
+    else if(op == "%") {
+        Some(l % r)
     }
-    else if(op == "^"){
-        dpow(l, r)
+    else if(op == "^") {
+        Some(dpow(l, r))
     }
-    else{
-        0.0;
+    else {
+        None();
     }
 }
 
-s2varTree(str: string) -> VarTree{
-  parsic(compilePegGrammar(gram), str, defaultPegActions)
+buildSub(xs : [flow]) {
+	fold(xs[1], xs[0], \acc, x -> VarNode(acc, x.op, x.r))
 }
 
-varTree2s(tree: VarTree) -> string{
+specialPegActions = {
+	t = setTree(defaultPegActions.t, "buildSub", buildSub);
+	SemanticActions(t);
+}
+
+s2varTree(str: string) -> VarTree {
+  parsic(compilePegGrammar(gram), str, specialPegActions);
+}
+
+varTree2s(tree: VarTree) -> string {
     switch (tree) {
         VarNode(l, op, r): "(" + varTree2s(l) + op + varTree2s(r) + ")";
         Number(val): d2s(val);
         Variable(var): var;
+        Fraction(f, s): varTree2s(f) + "/" + varTree2s(s);
     }
 }
 
-varTree2iNum(tree: VarTree) -> double{
-    switch(tree){
-        VarNode(l, op, r): operation(varTree2iNum(l), op, varTree2iNum(r));
-        Number(val): val;
-        Variable(var): 0.0;
+varTree2iNum(tree: VarTree) -> Maybe<double> {
+    switch(tree) {
+        VarNode(l, op, r): maybeBind2(\x, y -> operation(x, op, y))(varTree2iNum(l), varTree2iNum(r));
+        Number(val): Some(val);
+        Variable(var): None();
+        Fraction(f, s): maybeBind2(\x, y -> operation(x, "/", y))(varTree2iNum(f), varTree2iNum(s));
     }
 }
 
-varTree2iVariable(tree: VarTree, vars : Tree<string, double>) -> double{
-    switch(tree){
-        VarNode(l, op, r): operation(varTree2iVariable(l, vars), op, varTree2iVariable(r, vars));
-        Number(val): val;
+varTree2iVariable(tree: VarTree, vars : Tree<string, double>) -> Maybe<double> {
+    switch(tree) {
+        VarNode(l, op, r): maybeBind2(\x, y -> operation(x, op, y))(varTree2iVariable(l, vars), varTree2iVariable(r, vars));
+        Number(val): Some(val);
         Variable(var): {
-            switch(lookupTree(vars, var)){
-                Some(val): val;
-                None(): 0.0;
+            switch(lookupTree(vars, var)) {
+                Some(val): Some(val);
+                None(): None();
             }
         }
+        Fraction(f, s): maybeBind2(\x, y -> operation(x, "/", y))(varTree2iVariable(f, vars), varTree2iVariable(s, vars));
     }
 }
 
