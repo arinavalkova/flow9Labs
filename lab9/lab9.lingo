@@ -1,10 +1,26 @@
-tree = double | int | node | variable;
-node = ws '(' ws tree:l ws opeartion+$op ws tree:r ws ')' ws { VarNode(:l, $op, :r) };
-double = ws (digit+ '.' digit+)$d ws { Number(s2d($d)) };
-int = ws digit+$d ws { Number(s2d($d)) };
+exp = thirdPriorityExp;
+
+firstPriorityOperation = something:l firstPriorityOperator$op something:r { VarNode(:l, $op, :r) };
+
+secondPriorityExp = (firstPriorityOperation | something):s secondPriorityOperation*:is { buildSub(:s, :is) };
+secondPriorityOperation = secondPriorityOperator$op (firstPriorityOperation | something):s { VarNode(:s, $op, :s) };
+
+thirdPriorityOperation = thirdPriorityOperator$op secondPriorityExp:s { VarNode(:s, $op, :s) };
+thirdPriorityExp = (secondPriorityExp | fraction):e thirdPriorityOperation*:op { buildSub(:e, :op) };
+
+fraction = ws div:f ws '/' ws div:s ws { Fraction(:f, :s) };
+
+double = ws ('-'? digit+ '.' digit+)$d ws { Number(s2d($d)) };
+int = ws ('-'? digit+) $d ws { Number(s2d($d)) };
 variable = ws char+$c ws { Variable($c) };
 
+div = variable | double | int;
+
+something = fraction | variable | double | int | ws '(' exp:e ')' ws {:e};
+
 digit = '0' - '9';
-char = digit | 'a' - 'z' | 'A' - 'Z';
+char = 'a' - 'z' | 'A' - 'Z';
 ws = ' '*;
-opeartion = '*' | '-' | '+' | '^' | '/' | '%';
+firstPriorityOperator = '^';
+secondPriorityOperator = '*' | '/' | '%';
+thirdPriorityOperator = '+' | '-';
