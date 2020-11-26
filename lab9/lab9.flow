@@ -68,12 +68,7 @@ varTree2iVariable(tree: VarTree, vars : Tree<string, double>) -> Maybe<double> {
     switch(tree) {
         VarNode(l, op, r): maybeBind2(\x, y -> operation(x, op, y))(varTree2iVariable(l, vars), varTree2iVariable(r, vars));
         Number(val): Some(val);
-        Variable(var): {
-            switch(lookupTree(vars, var)) {
-                Some(val): Some(val);
-                None(): None();
-            }
-        }
+        Variable(var):lookupTree(vars, var);
         Fraction(f, s): maybeBind2(\x, y -> operation(x, "/", y))(varTree2iVariable(f, vars), varTree2iVariable(s, vars));
     }
 }
