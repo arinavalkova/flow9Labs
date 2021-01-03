@@ -1,0 +1,357 @@
+import runtime;
+import string;
+import lingo/pegcode/driver;
+
+gram = "#include lab10.lingo"
+
+VarTree ::= VarNode, Number, Variable, Neg;
+  VarNode(l: VarTree, op: string, r: VarTree);
+  Number(num: double);
+  Variable(var: string);
+  Neg(num: VarTree);
+
+s2varTree(str: string) -> VarTree {
+  parsic(compilePegGrammar(gram), str, defaultPegActions)
+}
+
+varTree2s(tree: VarTree) -> string {
+    switch (tree) {
+        VarNode(l, op, r) : "(" + varTree2s(l) + op + varTree2s(r) + ")";
+        Neg(num) : "(-" + varTree2s(num) + ")";
+        Number(val) : d2s(val);
+        Variable(var) : var;
+    }
+}
+
+sumFunction(l: VarTree, r:VarTree) -> VarTree {
+    switch(l) {
+            Number(val_l) : {
+            if (val_l == 0.0) {
+                r;
+            }
+            else {
+                switch (r) {
+                    Number(val_r) : {
+                        if (val_r == 0.0) {
+                            l;
+                        }
+                        else {
+                            VarNode(l, "+", r);
+                        }
+                    }
+                    default : {
+                        VarNode(l, "+", r);
+                    }
+                }
+            }
+        }
+        default : {
+            switch (r) {
+                Number(val): {
+                    if (val == 0.0) {
+                        l;
+                    }
+                    else {
+                        VarNode(l, "+", r);
+                    }
+                }
+                default : {
+                   VarNode(l, "+", r);
+                }
+            }
+        }
+    }
+}
+   
+mulFunction(l: VarTree, r: VarTree) -> VarTree {
+    switch (l) {
+            Number(val_l) : {
+            if (val_l == 0.0) {
+                Number(0.0);
+            }
+            else if (val_l == 1.0) {
+                r;
+            }
+            else {
+                switch (r) {
+                    Number(val_r) : {
+                    if (val_r == 0.0) {
+                       Number(0.0);
+                    }
+                    else if (val_r == 1.0) {
+                        l;
+                    }
+                    else {
+                        VarNode(l, "*", r);
+                    }
+                }
+                default : {
+                    VarNode(l, "*", r);
+                }
+            }
+            }
+        }
+        default : {
+            switch (r) {
+                Number(val) : {
+                    if (val == 0.0) {
+                       Number(0.0);
+                    }
+                    else if (val == 1.0) {
+                        l;
+                    }
+                    else {
+                        VarNode(l, "*", r);
+                    }
+                }
+                default : {
+                    VarNode(l, "*", r);
+                }
+            }
+        }
+    }
+}
+
+divFunction(l: VarTree, r: VarTree) -> VarTree {
+    switch(l) {
+            Number(val_l): {
+            if (val_l == 0.0) {
+                Number(0.0);
+            }
+            else {
+                switch (r) {
+                    Number(val_r): {
+                        if (val_r == 1.0) {
+                            l;
+                        }
+                        else {
+                            VarNode(l, "/", r);
+                        }
+                    }
+                    VarNode(a, op, b) : {
+                        if (op == "/") {
+                            divFunction(VarNode(l, "*", b), a);
+                        } else {
+                            VarNode(a, op, b);
+                        }
+                    }
+                    default : {
+                        VarNode(l, "/", r);
+                    }
+                }
+            }
+        }
+        default : {
+            switch (r) {
+                Number(val): {
+                    if (val == 1.0) {
+                        l;
+                    }
+                    else {
+                        VarNode(l, "/", r);
+                    }
+                }
+                VarNode(a, op, b) : {
+                    if (op == "/") {
+                        divFunction(VarNode(l, "*", b), a);
+                    } else {
+                        VarNode(a, op, b);
+                    }
+                }
+                default: {
+                    VarNode(l, "/", r);
+                }
+            }
+        }
+    }
+}
+
+difFunction(l: VarTree, r: VarTree) -> VarTree {
+    switch (l) {
+            Number(val_l): {
+            if (val_l == 0.0) {
+                Neg(r);
+            }
+            else {
+                switch (r) {
+                    Number(val_r): {
+                        if (val_r == 0.0) {
+                            l;
+                        }
+                        else {
+                            VarNode(l, "-", r);
+                        }
+                    }
+                    default: {
+                        VarNode(l, "-", r);
+                    }
+                }
+            }
+        }
+        default : {
+            switch (r) {
+                Number(val): {
+                    if (val == 0.0) {
+                        l;
+                    }
+                    else {
+                        VarNode(l, "-", r); 
+                    }
+                }
+                default : {
+                    VarNode(l, "-", r); 
+                }
+            }
+        }
+    }
+}
+
+degFunction(l: VarTree, r: VarTree) -> VarTree {
+    switch (l) {
+            Number(val_l): {
+            if (val_l == 1.0) {
+                Number(1.0);
+            }
+            else if (val_l == 0.0) {
+                Number(0.0);
+            }
+            else {
+                switch (r) {
+                    Number(val_r): {
+                        if (val_r == 0.0) {
+                            Number(1.0);
+                        }
+                        else if (val_r == 1.0) {
+                            l;
+                        }
+                        else {
+                            VarNode(l, "^", r); 
+                        }
+                    }
+                    default: {
+                        VarNode(l, "^", r); 
+                    }
+                }
+            }
+        }
+        default : {
+            switch (r) {
+                Number(val): {
+                    if (val == 0.0) {
+                        Number(1.0);
+                    }
+                    else if (val == 1.0) {
+                        l;
+                    }
+                    else {
+                        VarNode(l, "^", r); 
+                    }
+                }
+                default : {
+                    VarNode(l, "^", r); 
+                }
+            }
+        }
+    }
+}
+
+negFunction(l: VarTree) -> VarTree {
+    switch (l) {
+            Number(val): {
+            if (val == 0.0) {
+                Number(0.0);
+            }
+            else {
+                Neg(l);
+            }
+        }
+        default : {
+             Neg(l);
+        }
+    }
+}
+
+simplifyVarTree (tree: VarTree) -> VarTree {
+    switch (tree) {
+        VarNode(l, op, r) : {
+            if (op == "+") {
+                sumFunction(simplifyVarTree(l), simplifyVarTree(r));
+            } else if (op == "*") {
+                 mulFunction(simplifyVarTree(l), simplifyVarTree(r));
+            } else if (op == "-") {
+                difFunction(simplifyVarTree(l), simplifyVarTree(r));
+            } else if (op == "/") {
+                divFunction(simplifyVarTree(l), simplifyVarTree(r));
+            } else { 
+                degFunction(simplifyVarTree(l), simplifyVarTree(r));
+            }
+        }
+        Neg(num) : {
+            negFunction(simplifyVarTree(num));
+        }
+        Number(val) : Number(val);
+        Variable(name) : Variable(name);
+    }
+}
+
+operation(l: double, op: string, r: double) -> Maybe<double> {
+
+    if(op == "+"){
+        Some(l + r)
+    }
+    else if(op == "-") {
+        Some(l - r)
+    }
+    else if(op == "*") {
+        Some(l * r)
+    }
+    else if(op == "/") {
+        Some(l / r)
+    }
+    else if(op == "%") {
+        Some(l % r)
+    }
+    else if(op == "^") {
+        Some(dpow(l, r))
+    }
+    else {
+        None();
+    }
+}
+
+varTree2iVariable(tree: VarTree, vars: Tree<string, double>) -> Maybe<double> {
+    switch (tree) {
+        VarNode(l, op, r) : maybeBind2(\x, y -> operation(x, op, y))(varTree2iVariable(l, vars), varTree2iVariable(r, vars));
+        Number(val) : Some(val);
+        Neg(num) : {
+            switch (num) {
+                VarNode(l, op, r) : maybeBind2(\x, y -> operation(x, op, y))(varTree2iVariable(l, vars), varTree2iVariable(r, vars));
+                Number(val) : Some(-val);
+                Variable(var) : {
+                    switch (lookupTree(vars, var)) {
+                        Some(x) : Some(-x);
+                        None() : None();
+                    }
+                }
+                Neg(num2) : varTree2iVariable(num2, vars);
+            }
+        }
+        Variable(var) : lookupTree(vars, var)
+    }
+}
+
+main() {
+    line = getUrlParameter("line");
+    varsTree = fold(getAllUrlParametersArray(), makeTree(), \tree, var ->{
+        if(var[0] == "line")
+            tree
+        else
+            setTree(tree, var[0], s2d(var[1]))
+    });
+
+    t = s2varTree(line);
+    println(varTree2iVariable(t, varsTree));
+    simplify_t = simplifyVarTree(t);
+    println(varTree2s(simplify_t));
+    println(varTree2iVariable(simplify_t, varsTree));
+}
