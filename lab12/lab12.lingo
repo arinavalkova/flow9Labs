@@ -1,14 +1,14 @@
-nemo_prog           = variable_declaration*:a ws operator:b                                                      { NemoProgram(:a, :b)         };
+nemo_prog           = variable_declaration*:a ws operator:b                                                      { Nemo(:a, :b)                };
 
 variable_declaration = ws var_word ws char+$a ws ":" ws type:b ws ";" ws                                         { VariableDeclaration($a, :b) };
 
 type                = integer | array;
 
-integer             =  ws int_word ws                                                                            { IntegerType()               };
-array               =  ws "[" ws type:a "]" ws                                                                   { ArrayType(:a)               };
+integer             =  ws int_word ws                                                                            { Integer()                   };
+array               =  ws "[" ws type:a "]" ws                                                                   { Array(:a)                   };
 
-operator            = assignment | print | loop | question | choice | scope | if | while;
-expression          = binary_operator | number | app_function | upd_function | variable;
+operator            = if | while | assignment | print | loop | question | scope | choice;
+expression          = binary_operation | number | app_function | upd_function | variable;
 
 choice_operator     =  ws "U" operator;
 scope_operator      = ws ";" operator;
@@ -16,10 +16,10 @@ scope_operator      = ws ";" operator;
 compare_operator    = "==" | "<=" | ">=" | "<" | ">" | "!=";
 binary_operator     = "+" | "*" | "/" | "-" | "%";
 
-name                = letter+;
+name                = char+;
 char                = 'a' - 'z' | 'A' - 'Z';
 digit               = '0'-'9';
-ws                  = ' '*;
+ws                  = (' ' | '\t' | '\n' | '\r')*;
 
 variable            = ws char+$c ws                                                                              { Variable($c)                 };
 binary_operation    = ws "(" expression:l binary_operator$op expression:r ")" ws                                 { BinaryOperation(:l, $op, :r) };
@@ -27,16 +27,18 @@ number              = ws digit+$d ws                                            
 app_function        = ws "(" ws app_word ws "(" expression:a "," expression:b ")" ws ")" ws                      { App(:a, :b)                  };
 upd_function        = ws "(" ws upd_word ws "(" expression:a "," expression:b "," expression:c ")" ws ")" ws     { Upd(:a, :b, :c)              };
 
-assignment          = ws variable:a ws ":=" ws expression:b                                                      { Assignment(:a, :b)           };
+assignment          = ws variable:a ws ":=" ws expression:b ws                                                   { Assignment(:a, :b)           };
 print               = ws print_word ws "(" expression:a ")" ws                                                   { Printing(:a)                 };
 loop                = ws "(" ws operator:a ws ")" ws "*" ws                                                      { Loop(:a)                     };
 question            = ws "(" ws expression:l ws compare_operator$op ws expression:r ws ")" ws "?" ws             { Question(:l, $op, :r)        };
-choice              = ws "(" operator:a choice_operator*:op ")" ws                                               { Choice(:a, :op)              };
-scope               = ws "(" operator:a scope_operator*:op ")" ws                                                { Scope(:a, :op)               };
+scope               = ws "(" operator:a scope_operator*:op ")" ws                                                { createScope(:a, :op)         };
+choice              = ws "(" operator:a choice_operator*:op ")" ws                                               { createChoice(:a, :op)        };
 if                  = ws if_word ws expression:l compare_operator$op expression:r ws
-                      then_word ws operator:a ws else_word ws operator:b ws                                      { If(:l, $op, :r, :a, :b)      };
+                      then_word ws operator:a ws else_word ws operator:b ws                                      { createFromIf(:l, $op, :r, :a, 
+                                                                                                                                             :b)};
 while               = ws while_word ws expression:l compare_operator$op expression:r
-                      ws do_word ws operator:a ws                                                                { While(:l, $op, :r, :a)       };
+                      ws do_word ws operator:a ws                                                                { createFromWhile(:l, $op, :r, 
+                                                                                                                                             :a)};
 
 int_word      = "INT";
 var_word      = "VAR";
