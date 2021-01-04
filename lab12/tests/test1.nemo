@@ -1,0 +1,10 @@
+VAR x : INT; 
+VAR y : INT;
+VAR z : INT;
+(
+   y := 1;
+   ((PRINT(x); x := 10) U (PRINT(x); x := 20) U (PRINT(x); x := 30));
+   PRINT(x);
+   y := (y + 1);
+   PRINT(y)
+)  
