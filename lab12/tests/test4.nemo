@@ -1,0 +1,10 @@
+VAR x: INT;
+VAR times: INT;
+(
+    x := 0;
+    times := 10;
+    WHILE x < times DO (
+        PRINT(x);
+        x := (x + 1)
+    )
+)
