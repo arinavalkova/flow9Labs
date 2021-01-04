@@ -1,16 +1,19 @@
 import string;
+import lingo/pegcode/driver;
+
+gram = "#include lab12.lingo"
 
 Expression::= BinaryOperation, App, Upd, Variable, Number;
     BinaryOperation     (l: Expression, op: string, r: Expression);
     App                 (a: Expression, b: Expression);
     Upd                 (a: Expression, b: Expression, c: Expression);
     Variable            (c: string);
-    Number              (d: int);
+    Number              (d: double);
 
 Operator::= Assignment, Printing, Loop, Choice, Question, Scope;
     Assignment          (a: Variable, b: Expression);
     Printing            (a: Expression);
-    Loop                (ops: Operator);
+    Loop                (op: Operator);
     Choice              (ops: [Operator]);
     Scope               (ops: [Operator]);
     Question            (l: Expression, op: string, r: Expression);
@@ -19,6 +22,108 @@ Type::= Integer, Array;
     Integer             ();
     Array               (a: Type);
     VariableDeclaration (a: string, b: Type);
+    Nemo                (a : [VariableDeclaration], b : Operator);
+
+
+expr2str(e : Expression) -> string {
+    switch (e) {
+        BinaryOperation      (l, op, r)      : "(" + expr2str(l) + op + expr2str(r) + ")";
+        Number               (d)             : d2s(d);
+        App                  (a, b)          : "APP(" + expr2str(a) + "," + expr2str(b) + ")";
+        Upd                  (a, b, c)       : "UPD(" + expr2str(a) + "," + expr2str(b) + "," + expr2str(c) + ")";
+        Variable             (c)             : c;
+    }
+}
+
+
+operator2str(op : Operator) -> string {
+    switch (op) {
+        Assignment          (a, b)           : expr2str(a) + ": = " + expr2str(b) + ";\n";
+        Printing            (a)              : "PRINT(" + expr2str(a) + ")"+ ";\n";
+        Loop                (ops)            : "(" +  operator2str(ops) + " )" + "*"+ ";\n";
+        Choice              (ops)            : "(" + strGlue(map(ops, operator2str), " U ") + ")"+ "\n";
+        Scope               (ops)            : "(" + strGlue(map(ops, operator2str), "") + ")\n";
+		Question            (l, ops, r)      : "(" + expr2str(l) + " " + ops + " " + expr2str(r) + ")?;\n";
+    }
+}
+
+type2str(type : Type) -> string{
+    switch (type) {
+		Integer             ()               : "INT";
+		Array               (a)              : "[" + type2str(a) + "]";
+	}
+}
+
+variableDeclaration2str(v : VariableDeclaration) -> string {
+    "VAR " + v.a + " : " + type2str(v.b) + ";";
+}
+
+massiveOfDeclarations2str(d : [VariableDeclaration]) -> string {
+  	strGlue(map(d, variableDeclaration2str), "\n"); 
+}
+
+
+nemo2str(nemo : Nemo) -> string {
+    massiveOfDeclarations2str(nemo.a) + "\n" + operator2str(nemo.b);
+}
+
+str2nemo(str : string) -> Nemo {
+    parsic(compilePegGrammar(gram), str, SemanticActions(setTree(
+                                                                setTree(
+                                                                        setTree(
+                                                                                setTree(
+                                                                                        defaultPegActions.t
+                                                                                        , "createScope"
+                                                                                        , createScope
+                                                                                    )
+                                                                                , "createChoice"
+                                                                                , createChoice
+                                                                            )
+                                                                        , "createFromIf"
+                                                                        , createFromIf
+                                                                    )
+                                                                , "createFromWhile"
+                                                                , createFromWhile
+                                                            )
+            )                                       )
+}
+
+createChoice(array : [flow]) -> Choice {
+    Choice(concat([array[0]], array[1]));
+}
+createScope(array : [flow]) -> Scope {
+    Scope(concat([array[0]], array[1]));
+}
+
+getReverseComparisonOperator(comparisonOp : string) -> string {
+    if (comparisonOp == "==") {
+       "!=";
+    } else if (comparisonOp == "<=") {
+       ">";
+    } else if (comparisonOp == ">="){
+       "<";
+    } else if (comparisonOp == "<") {
+       ">=";
+    } else if (comparisonOp == ">") {
+       "<=";
+    } else if (comparisonOp == "!=") {
+       "==";
+    } else {
+       comparisonOp;
+    }
+}
+
+createFromIf(array : [flow]) -> Choice {
+    if_expr = Scope([Question(array[0], array[1], array[2]), array[3]]);
+    else_expr = Scope([Question(array[0], getReverseComparisonOperator(array[1]), array[2]), array[4]]);
+    Choice([if_expr, else_expr]);
+}
+
+createFromWhile(data : [flow]) -> Loop {
+    while_expr = Question(data[0], data[1], data[2]);
+    operators = data[3];
+    Loop(Scope([while_expr, operators]));
+}
 
 main() {
     file_name = "test.nemo";
