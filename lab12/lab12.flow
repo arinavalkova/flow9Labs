@@ -1,0 +1,30 @@
+import string;
+
+Expression::= BinaryOperation, App, Upd, Variable, Number;
+    BinaryOperation     (l: Expression, op: string, r: Expression);
+    App                 (a: Expression, b: Expression);
+    Upd                 (a: Expression, b: Expression, c: Expression);
+    Variable            (c: string);
+    Number              (d: int);
+
+Operator::= Assignment, Printing, Loop, Choice, Question, Scope;
+    Assignment          (a: Variable, b: Expression);
+    Printing            (a: Expression);
+    Loop                (ops: Operator);
+    Choice              (ops: [Operator]);
+    Scope               (ops: [Operator]);
+    Question            (l: Expression, op: string, r: Expression);
+
+Type::= Integer, Array;
+    Integer             ();
+    Array               (a: Type);
+    VariableDeclaration (a: string, b: Type);
+
+main() {
+    file_name = "test.nemo";
+    nemo_file = getFileContent(file_name);
+    nemo = str2nemo(nemo_file);
+    nemo_string = nemo2str(nemo);
+    println(nemo_string);
+    println(nemo);
+}
