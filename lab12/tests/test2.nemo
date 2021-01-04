@@ -1,0 +1,12 @@
+VAR src: [INT];
+VAR i: INT;
+VAR size: INT;
+(
+    i := 0;
+    size := 10;
+    WHILE i < size DO (
+        src := (UPD(src, i, i));
+        i := (i + 1)
+    );
+    PRINT(src)
+)
