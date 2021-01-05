@@ -36,8 +36,8 @@ str2VNemo(str : string) -> VNemo {
 
 runVNemo(vnemo: VNemo) {
     maxLabel = fold(vnemo.b, 0, \prevMax, elem -> max(elem.a, prevMax));
-
-    initSet = buildSet([Configuration(0, MemoryState(fold(vnemo.a, makeTree(), \acc, variableDecl ->
+    
+    runVNemoTail([Configuration(0, MemoryState(fold(vnemo.a, makeTree(), \acc, variableDecl ->
 		switch (lookupTree(acc, variableDecl.a)) {
 			Some(i) : {
                 println("Error: this var " + variableDecl.a + " has already declared");
@@ -49,16 +49,20 @@ runVNemo(vnemo: VNemo) {
 	                                            }
             );
 		}
-	)))]); 
-
-    exitPredicate = \s -> existsSet(s, \config -> config.label <= maxLabel);
-    nextStep = \s -> foldSet(s, makeSet(), \acc, config -> mergeSets(acc, runNextState(vnemo, config, maxLabel)));
-	ignore = for(initSet, exitPredicate, nextStep);
+	)))], [], vnemo, maxLabel);
 }
 
-runNextState(vnemo: VNemo, config: Configuration, maxLabel: int) -> Set<Configuration> {
+runVNemoTail(queue : [Configuration], visited : [Configuration], vnemo : VNemo, maxLabel : int) {
+    config = queue[0];
+    newQueue = concat(tail(queue), runNextState(vnemo, config, maxLabel));
+    if (length(newQueue) != 0) {
+        runVNemoTail(newQueue, concat(visited, [config]), vnemo, maxLabel);
+    }
+}
+
+runNextState(vnemo: VNemo, config: Configuration, maxLabel: int) -> [Configuration] {
     if (config.label > maxLabel) {
-        emptyConfigurationSet();
+        emptyConfigurationArray();
     } else {
         switch (vnemo.b[config.label]) {
             Assignment   (label, var, expression, goto)                     : assignmentRun(var, expression, goto, config);
@@ -69,14 +73,14 @@ runNextState(vnemo: VNemo, config: Configuration, maxLabel: int) -> Set<Configur
     }
 }
 
-printRun(expression: Expression, goto: [Label], config : Configuration) -> Set<Configuration> {
+printRun(expression: Expression, goto: [Label], config : Configuration) -> [Configuration] {
     switch (executeExpression(expression, config.state)) {
         Some(value) : {
             println(value2str(value));
             addNewStateFromGoto(goto, config.state);
         };
         None() : {
-            emptyConfigurationSet();
+            emptyConfigurationArray();
         }
     }
 }
@@ -123,7 +127,7 @@ compare(op: string, left : Expression, right: Expression, state: MemoryState) ->
 }
 
 ifRun(op: string, l: Expression, r: Expression, ifFunc: [Label], elseFunc: [Label], config : Configuration) 
-                        -> Set<Configuration> {
+                        -> [Configuration] {
     switch (compare(op, l, r, config.state)) {
         Some(isIfLine) : {
             if (isIfLine){
@@ -133,20 +137,20 @@ ifRun(op: string, l: Expression, r: Expression, ifFunc: [Label], elseFunc: [Labe
             }
         };
         None() : {
-            emptyConfigurationSet();
+            emptyConfigurationArray();
         }
     }
 }
 
-addNewStateFromGoto(goto: [Label], state: MemoryState) -> Set<Configuration> {
-    fold(goto, emptyConfigurationSet(), \acc, label -> insertSet(acc, Configuration(label.id, state)));
+addNewStateFromGoto(goto: [Label], state: MemoryState) -> [Configuration] {
+    fold(goto, emptyConfigurationArray(), \acc, label -> concat(acc, [Configuration(label.id, state)]));
 }
 
-assignmentRun(var: string, expression: Expression, goto: [Label], config : Configuration) -> Set<Configuration> {
+assignmentRun(var: string, expression: Expression, goto: [Label], config : Configuration) -> [Configuration] {
     isKnownVar = lookupTree(config.state.vars, var);
     if (isNone(isKnownVar)) {
         println("Error: unknown var=" + var);
-        emptyConfigurationSet();
+        emptyConfigurationArray();
     }
     else {
         valie = either(isKnownVar, Integer(0));
@@ -160,7 +164,7 @@ assignmentRun(var: string, expression: Expression, goto: [Label], config : Confi
                             };
                             default : {
                                 println("Error: can't assign int to array");
-                                emptyConfigurationSet();
+                                emptyConfigurationArray();
                             };
                         }
                     };
@@ -171,14 +175,14 @@ assignmentRun(var: string, expression: Expression, goto: [Label], config : Confi
                             };
                             default : {
                                 println("Error: can't assign array to int");
-                                emptyConfigurationSet();
+                                emptyConfigurationArray();
                             };
                         }
                     };
                 }
             };
             None(): {
-                emptyConfigurationSet();
+                emptyConfigurationArray();
             }
         }
     }
@@ -288,9 +292,7 @@ binaryOperation(left: Maybe<Value>, op: string, right: Maybe<Value>) -> Maybe<Va
     }
 }
 
-emptyConfigurationSet() -> Set<Configuration>{
-    makeSet();
-}
+emptyConfigurationArray() -> [Configuration] {[]}
 
 main() {
     file_name = "test.vnemo";
