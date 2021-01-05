@@ -1,0 +1,76 @@
+import string;
+import lingo/pegcode/driver;
+
+gram = "#include lab13.lingo"
+
+Label                   (d: int);
+VariableDeclaration     (a: string, b: Type);
+VNemo                   (a: [VariableDeclaration], b: [Statement]);
+
+Type::= Integer, Array;
+    Integer             ();
+    Array               (a: Type);
+
+Expression::= BinaryOperation, App, Upd, Variable, Number;
+    BinaryOperation     (l: Expression, op: string, r: Expression);
+    App                 (a: Expression, b: Expression);
+    Upd                 (a: Expression, b: Expression, c: Expression);
+    Variable            (c: string);
+    Number              (d: int);
+
+Statement::= Assignment, If, Printing;
+    Assignment          (a: int, b: string, c: Expression, d: [Label]);
+    If                  (a: int, b: string, c: Expression, d: Expression, e: [Label], f: [Label]);
+    Printing            (a: int, b: Expression, c: [Label]);
+
+str2VNemo(str : string) -> VNemo {
+	parsic(compilePegGrammar(gram), str, defaultPegActions);
+}
+
+vNemo2str(vnemo : VNemo) -> string {
+    strGlue(map(vnemo.a, variableDeclaration2str), "\n") 
+    + "\n" + 
+    strGlue(map(vnemo.b, statement2str), "\n");
+}
+
+variableDeclaration2str(var : VariableDeclaration) -> string {
+    "var " + var.a + " : " + type2str(var.b) + ";";
+}
+
+type2str(type : Type) -> string {
+    switch (type) {
+		Integer()                     : "int";
+		Array(arr)                    : "[" + type2str(arr) + "]";
+	}
+}
+
+statement2str(statement : Statement) -> string {
+	switch (statement) {
+		Assignment(a, b, c, d)        : i2s(a) + ": " + b + " := " + expr2str(c) + " goto {" + strGlue(map(d, label2str), ", ") + "}";
+		If(a, b, c, d, e, f)          : i2s(a) + ": " + "if " + expr2str(c) + " " + b + " " + expr2str(d) + " " + "then {" + 
+                                        strGlue(map(e, label2str), ",") + "}" + " else " + "{" + strGlue(map(f, label2str), ",") + "}";
+		Printing(a, b, c)             : i2s(a) + ": print(" + expr2str(b) + ") goto {" + strGlue(map(c, label2str), " ") + "}";
+	}
+}
+
+expr2str(exp: Expression) -> string {
+    switch (exp) {
+        BinaryOperation(l, op, r)     : "(" + expr2str(l) + op + expr2str(r) + ")";
+        Number(d)                     : i2s(d)
+        App(a, b)                     : "app(" + expr2str(a) + "," + expr2str(b) + ")";
+        Upd(a, b, c)                  : "upd(" + expr2str(a) + "," + expr2str(b) + "," + expr2str(c) + ")";
+        Variable(name)                : name;
+    }
+}
+
+label2str(label: Label) -> string {
+    i2s(label.d);
+}
+
+main () {
+    file_name = "test.vnemo";
+    vnemo = str2VNemo(getFileContent(file_name));
+    vnemo_str = vNemo2str(vnemo);
+    println(vnemo);
+    println(vnemo_str);
+}
