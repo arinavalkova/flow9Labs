@@ -1,0 +1,17 @@
+var array : [int];
+var len : int;
+var max : int;
+var index : int;
+
+0: array := upd(array, 0, 1) goto {1}
+1: array := upd(array, 1, 100) goto {2}
+2: array := upd(array, 2, 32) goto {3}
+3: array := upd(array, 3, 321) goto {4}
+4: len := 4 goto {5}
+5: max := app(array, 0) goto {6}
+6: index := 0 goto {7}
+7: if index < len then {8} else {11}
+8: if app(array, index) > max then {9} else {10}
+9: max := app(array, index) goto {10}
+10: index := (index + 1) goto {7}
+11: print(max) goto {12}
