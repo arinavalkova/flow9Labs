@@ -1,0 +1,16 @@
+var src : [int];
+var dest: [int];
+var len : int;
+var index : int;
+
+0: src := upd(src, 0, 1) goto {1}
+1: src := upd(src, 1, 100) goto {2}
+2: src := upd(src, 2, 32) goto {3}
+3: src := upd(src, 3, 321) goto {4}
+4: len := 4 goto {5}
+5: index := 0 goto {6}
+6: if index < len then {7} else {9}
+7: dest := upd(dest, index, app(src, index)) goto {8}
+8: index := (index + 1) goto {6}
+9: print(src) goto {10}
+10: print(dest) goto {11}
