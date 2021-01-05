@@ -1,0 +1,48 @@
+vnemo_prog              = ws variable_declaration*:a ws state*:b                                                    { VNemo(:a, :b)               };
+
+variable_declaration    = ws var_word ws char+$a ws ":" ws type:b ws ";" ws                                         { VariableDeclaration($a, :b) };
+
+type                    = integer | array;
+
+integer                 =  ws int_word ws                                                                           { IntegerType()               };
+array                   =  ws "[" ws type:a "]" ws                                                                  { ArrayType(:a)               };
+
+state                   = assignment | if | print;
+
+assignment              = ws (digit+)$a ws ":" ws char+$b ws ":=" ws expression:c ws goto_word ws
+                          "{" ws label*:d ws "}" ws                                                                 { Assignment(s2i($a), $b, :c,
+                                                                                                                                              :d) };
+
+if                      = ws (digit+)$a ws ":" ws if_word ws expression:b ws compare_operator$c ws
+                          expression:d ws then_word ws "{" ws label*:e ws "}" ws else_word ws "{" ws
+                          label*:f ws "}" ws                                                                        { If(s2i($a), $c,
+                                                                                                                                  :b, :d, :e, :f) };
+print                   = ws (digit+)$a ws ":" ws print_word ws "(" expression:b ")" ws goto_word ws
+                          "{" ws label*:c ws "}" ws                                                                 { Printing(s2i($a), :b, :c)   };
+
+expression              = binary_operation | number | app | upd | variable;
+
+binary_operation        = ws "(" expression:l binary_operator$op expression:r ")" ws                                { BinaryOperation(:l, $op, :r)};
+number                  = ws digit+$d ws                                                                            { Number(s2i($d))             };
+app                     = ws app_word ws "(" ws expression:a "," ws expression:b ")" ws                             { App(:a, :b)                 };
+upd                     = ws upd_word ws "(" ws expression:a "," ws expression:b "," ws expression:c ")" ws         { Upd(:a, :b, :c)             };
+variable                = ws char+$c ws                                                                             { Variable($c)                };      
+label                   = ws digit+$d ws ","? ws                                                                    { Label(s2i($d))              };
+
+compare_operator        = "==" | "<=" | ">=" | "<" | ">" | "!=";
+binary_operator         = "+" | "*" | "/" | "-" | "%";
+char                    = 'a' - 'z' | 'A' - 'Z';
+digit                   = '0'-'9';
+ws                      = (' ' | '\t' | '\n' | '\r')*;
+
+int_word      = "int";
+var_word      = "var";
+app_word      = "app";
+upd_word      = "upd";
+print_word    = "print";
+if_word       = "if";
+then_word     = "then";
+else_word     = "else";
+while_word    = "while";
+do_word       = "do";
+goto_word     = "goto";
