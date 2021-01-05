@@ -1,0 +1,20 @@
+var src : [int];
+var reversed: [int];
+var len : int;
+var index : int;
+var stindex : int;
+var endindex : int;
+
+0: src := upd(src, 0, 1) goto {1}
+1: src := upd(src, 1, 100) goto {2}
+2: src := upd(src, 2, 32) goto {3}
+3: src := upd(src, 3, 321) goto {4}
+4: len := 4 goto {5}
+5: endindex := (len - 1) goto {6}
+6: stindex := 0 goto {7}
+7: if endindex >= 0 then {8} else {11}
+8: reversed := upd(reversed, stindex, app(src, endindex)) goto {9}
+9: endindex := (endindex - 1) goto {10}
+10: stindex := (stindex + 1) goto {7}
+11: print(src) goto {12}
+12: print(reversed) goto {13}
