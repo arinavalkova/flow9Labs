@@ -1,0 +1,273 @@
+import common/vnemo_parser;
+
+export {
+
+Value ::= Integer, Array;
+    Integer             (value : int);
+    Array               (arr : [Value]);
+
+MemoryState             (vars : Tree<string, Value>);
+Configuration           (label : int, state : MemoryState);
+
+runVNemo(vnemo: VNemo) -> void;
+}
+
+runVNemo(vnemo: VNemo) {
+    maxLabel = fold(vnemo.b, 0, \prevMax, elem -> max(elem.a, prevMax));
+
+    runVNemoTail([Configuration(0, MemoryState(fold(vnemo.a, makeTree(), \acc, variableDecl ->
+		switch (lookupTree(acc, variableDecl.a)) {
+			Some(i) : {
+                println("Error: this var " + variableDecl.a + " has already declared");
+                acc;
+            };  
+			None() : setTree(acc, variableDecl.a,  switch (variableDecl.b) {
+		                                            IntegerType() : Integer(0);
+		                                            ArrayType(a) : Array([]);
+	                                            }
+            );
+		}
+	)))], [], vnemo, maxLabel);
+}
+
+runVNemoTail(queue : [Configuration], visited : [Configuration], vnemo : VNemo, maxLabel : int) {
+    config = queue[0];
+    newQueue = concat(tail(queue), runNextState(vnemo, config, maxLabel));
+    if (length(newQueue) != 0) {
+        runVNemoTail(newQueue, concat(visited, [config]), vnemo, maxLabel);
+    }
+}
+
+runNextState(vnemo: VNemo, config: Configuration, maxLabel: int) -> [Configuration] {
+    if (config.label > maxLabel) {
+        emptyConfigurationArray();
+    } else {
+        switch (vnemo.b[config.label]) {
+            AssignmentStatement   (label, var, expression, goto)                     : assignmentRun(var, expression, goto, config);
+            IfStatement           (label, op, lexpr, expression, ifFunc, elseFunc)   : ifRun(op, lexpr, expression, ifFunc, 
+                                                                                                                  elseFunc, config);
+            PrintingStatement     (label, expression, goto)                          : printRun(expression, goto, config); 
+        }
+    }
+}
+
+printRun(expression: Expression, goto: [Label], config : Configuration) -> [Configuration] {
+    switch (executeExpression(expression, config.state)) {
+        Some(value) : {
+            println(value2str(value));
+            addNewStateFromGoto(goto, config.state);
+        };
+        None() : {
+            emptyConfigurationArray();
+        }
+    }
+}
+
+value2str(value: Value) -> string {
+	switch (value) {
+		Integer     (n)        : i2s(n);
+		Array       (arr)      : "[" + strGlue(map(arr, value2str), ", ") + "]";
+	}
+}
+
+compare(op: string, left : Expression, right: Expression, state: MemoryState) -> Maybe<bool> {
+    leftExpression = executeExpression(left, state);
+    rightExpression = executeExpression(right, state);
+
+    if (isNone(leftExpression) || isNone(rightExpression)) {
+        None()
+    } else {
+        switch (either(leftExpression, Integer(0))) {
+            Integer(leftIntValue):
+                switch (either(rightExpression, Integer(0))) {
+                    Integer(rightIntValue): {
+                        Some(
+                             if      (op == "==")      {leftIntValue == rightIntValue}  
+                             else if (op == "!=")      {leftIntValue != rightIntValue}
+                             else if (op == "<=")      {leftIntValue <= rightIntValue} 
+                             else if (op == ">=")      {leftIntValue >= rightIntValue} 
+                             else if (op == "<")       {leftIntValue < rightIntValue}
+                             else if (op == ">")       {leftIntValue > rightIntValue} 
+                             else                      {false}
+                            )
+                    }
+                    default : {
+                        println("Error: right operand is not integer");
+                        None();
+                    }
+                }
+            default : {
+                println("Error: left operand is not integer");
+                None();
+            }
+        };
+    }
+}
+
+ifRun(op: string, l: Expression, r: Expression, ifFunc: [Label], elseFunc: [Label], config : Configuration) 
+                        -> [Configuration] {
+    switch (compare(op, l, r, config.state)) {
+        Some(isIfLine) : {
+            if (isIfLine){
+                addNewStateFromGoto(ifFunc, config.state);
+            } else {
+                addNewStateFromGoto(elseFunc, config.state);
+            }
+        };
+        None() : {
+            emptyConfigurationArray();
+        }
+    }
+}
+
+addNewStateFromGoto(goto: [Label], state: MemoryState) -> [Configuration] {
+    fold(goto, emptyConfigurationArray(), \acc, label -> concat(acc, [Configuration(label.id, state)]));
+}
+
+assignmentRun(var: string, expression: Expression, goto: [Label], config : Configuration) -> [Configuration] {
+    isKnownVar = lookupTree(config.state.vars, var);
+    if (isNone(isKnownVar)) {
+        println("Error: unknown var=" + var);
+        emptyConfigurationArray();
+    }
+    else {
+        valie = either(isKnownVar, Integer(0));
+        switch (executeExpression(expression, config.state)) {
+            Some(exprVal) : {
+                switch (exprVal) {
+                    Integer(num) : {
+                        switch (valie) {
+                            Integer(i) : {
+                                addNewStateFromGoto(goto, MemoryState(setTree(config.state.vars, var, Integer(num))));
+                            };
+                            default : {
+                                println("Error: can't assign int to array");
+                                emptyConfigurationArray();
+                            };
+                        }
+                    };
+                    Array(arr) : {
+                        switch (valie) {
+                            Array(i) : {
+                                addNewStateFromGoto(goto, MemoryState(setTree(config.state.vars, var, Array(arr))));
+                            };
+                            default : {
+                                println("Error: can't assign array to int");
+                                emptyConfigurationArray();
+                            };
+                        }
+                    };
+                }
+            };
+            None(): {
+                emptyConfigurationArray();
+            }
+        }
+    }
+}
+
+executeExpression(expression : Expression, state : MemoryState) -> Maybe<Value> {
+	switch (expression) {
+		BinaryOperation(l, op, r)                : binaryOperation(executeExpression(l, state), op, executeExpression(r, state));
+		Upd(arrayExp, indexExp, newValueExp)     : updOpearation(executeExpression(arrayExp, state), executeExpression(indexExp, state), 
+                                                                                                           executeExpression(newValueExp, state));	
+		App(arrayExp, indexExp)                  : appOperation(executeExpression(arrayExp, state), executeExpression(indexExp, state));
+		Variable(var)                            : lookupTree(state.vars, var);
+		Number(number)                           : Some(Integer(number));
+	}
+}
+
+appOperation(array: Maybe<Value> , index: Maybe<Value>) -> Maybe<Value> {
+    if (isNone(array) || isNone(index)) {
+        None();
+    } else {
+        switch (either(array, Array([]))) {
+            Array(arr) : {
+                switch (either(index, Integer(0))) {
+                    Integer(indexValue) :
+                        if (indexValue >= 0 && indexValue < length(arr)) {
+                            Some(arr[indexValue]) 
+                        } else {
+                            None();
+                        }
+                    default : {
+                        println("Error : index is not an integer");
+                        None();
+                    }
+                }
+            }
+            default : {
+                println("Error: app working only with arrays");
+                None();
+            }
+        };
+    }
+}
+
+updOpearation(array: Maybe<Value> , index: Maybe<Value>, newValue: Maybe<Value>) -> Maybe<Value> {
+    if (isNone(array) || isNone(index) || isNone(newValue)) {
+        None();
+    } else {
+        switch (either(newValue, Integer(0))) {
+            Integer(newV) : { 
+                    switch (either(array, Array([]))) {
+                        Array(arr) : {
+                            switch (either(index, Integer(0))) {
+                                Integer(indexValue) :
+                                    if (indexValue <= length(arr)) {
+                                       Some(Array(replace(arr, indexValue, Integer(newV))));
+                                    } else {
+                                        println("Error : array index greater than array len");
+                                        None();
+                                    }
+                                default : {
+                                    println("Error: array index is not integer");
+                                    None();
+                                }
+                            }
+                        }
+                        default : {
+                            println("Erroe: upd working only with arrays");
+                            None();
+                        }
+                    }
+            }
+            default : {
+                println("Erroe: value is not integer");
+                None();
+            }
+        };
+    }
+}
+
+binaryOperation(left: Maybe<Value>, op: string, right: Maybe<Value>) -> Maybe<Value> {
+    if (isNone(left) || isNone(right)){
+        None()
+    } else{
+        switch (either(left, Integer(0))) {
+            Integer(leftIntValue): {
+                switch (either(right, Integer(0))) {
+                    Integer(rightIntValue):
+                        Some(Integer(
+                                     if      (op == "+")            {leftIntValue + rightIntValue}
+                                     else if (op == "*")            {leftIntValue * rightIntValue}
+                                     else if (op == "-")            {leftIntValue - rightIntValue}
+                                     else if (op == "/")            {leftIntValue / rightIntValue}
+                                     else                           {Integer(0).value;           }
+                                    )
+                            )
+                    default: {
+                        println("Error: right operand isn't integer");
+                        None();
+                    }
+                }
+            }
+            default: {
+                println("Error: left operand isn't integer");
+                None();
+            }
+        };
+    }
+}
+
+emptyConfigurationArray() -> [Configuration] {[]}
