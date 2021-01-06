@@ -1,0 +1,10 @@
+import common/nemo_parser;
+
+main() {
+    file_name = "test.nemo";
+    nemo_file = getFileContent(file_name);
+    nemo = str2nemo(nemo_file);
+    nemo_string = nemo2str(nemo);
+    println(nemo_string);
+    println(nemo);
+}
