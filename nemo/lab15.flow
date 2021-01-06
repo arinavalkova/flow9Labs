@@ -11,84 +11,77 @@ translateNemo(nemo: Nemo) -> string {
 }
 
 B2S(operator : Operator, prevState : TranslatorState) -> TranslatorState {
+    gotoLabel = prevState.maxLabel + 1;
 	switch (operator) {
-		Assignment          (variable, expression)       : assignmentB2S(variable, expression, prevState);
-        Printing            (expression)                 : printingB2S(expression, prevState);
-		Question            (l, op, r)                   : questionB2S(l, op, r, prevState);
-		Scope               (ops)                        : fold(ops, prevState, \currentState, nextOperator -> B2S(nextOperator, currentState));
-		Choice              (ops)                        : choiceB2S(ops, prevState);
-		Loop                (op)                         : loopB2S(op, prevState);
+		Assignment(variable, expression) : {
+	        TranslatorState(prevState.src + 
+            statement2str(AssignmentStatement(prevState.maxLabel, variable.c, expression, [Label(gotoLabel)])) + "\n"
+            , gotoLabel
+            , prevState.maxLabel
+            );
+        }
+        Printing(expression) : {
+            TranslatorState(prevState.src + 
+            statement2str(PrintingStatement(prevState.maxLabel, expression, [Label(gotoLabel)])) + "\n"
+            , gotoLabel
+            , prevState.maxLabel
+            );
+        }
+		Question(l, op, r) : {
+            TranslatorState(prevState.src + 
+            statement2str(IfStatement(prevState.maxLabel, op, l, r, [Label(gotoLabel)], [])) + "\n"
+            , gotoLabel
+            , prevState.maxLabel
+            );
+        }
+		Scope(ops) : {
+            fold(ops, prevState, \currentState, nextOperator -> B2S(nextOperator, currentState));
+        }
+		Choice(ops) : {
+             opsStates = splitOperators(ops, prevState.maxLabel);
+             nextLabels = map(opsStates, \state -> state.maxLabel);
+             operatorsStartLabels = concat([prevState.maxLabel + 1], map(take(nextLabels, length(nextLabels) - 1), \label -> label + 1)); 
+             startChoice = statement2str(makeIfStatement(prevState.maxLabel, operatorsStartLabels)) + "\n";
+
+             lastOperatorState = opsStates[length(opsStates) - 1];
+             end = lastOperatorState.maxLabel;
+             operatorsSrc = concatStrings(map(take(opsStates, length(opsStates) - 1), 
+             \state -> (state.src + statement2str(makeIfStatement(state.maxLabel, [end])) + "\n"))) + lastOperatorState.src;
+
+             TranslatorState(prevState.src + startChoice + operatorsSrc, opsStates[length(opsStates) - 1].maxLabel, prevState.maxLabel);
+        }
+		Loop(op) : {
+            translatedBody = B2S(op, TranslatorState("", gotoLabel, prevState.maxLabel));
+            end = translatedBody.maxLabel;
+
+            TranslatorState(
+                prevState.src +
+                statement2str(makeIfStatement(prevState.maxLabel, [gotoLabel, end + 1])) + "\n" +
+                translatedBody.src + 
+                statement2str(makeIfStatement(end, [prevState.maxLabel])) + "\n",
+                end + 1,
+                prevState.maxLabel
+            );
+        }
 	}
 }
 
-assignmentB2S(variable: Variable, expression: Expression, prevState: TranslatorState) -> TranslatorState {
-    //встроить прям в свитч
-    gotoLabel = prevState.maxLabel + 1;
-    newSrcTranslatedLine = statement2str(AssignmentStatement(prevState.maxLabel, variable.c, expression, [Label(gotoLabel)])) + "\n";
-	TranslatorState(prevState.src + newSrcTranslatedLine, gotoLabel, prevState.maxLabel);
-}
-
-printingB2S(expression: Expression, prevState: TranslatorState) -> TranslatorState {
-    gotoLabel = prevState.maxLabel + 1;
-    newSrcTranslatedLine = statement2str(PrintingStatement(prevState.maxLabel, expression, [Label(gotoLabel)])) + "\n";
-    TranslatorState(prevState.src + newSrcTranslatedLine, gotoLabel, prevState.maxLabel);
-}
-
-questionB2S(l: Expression, op: string, r: Expression, prevState: TranslatorState) -> TranslatorState {
-    gotoLabel = prevState.maxLabel + 1;
-    newSrcTranslatedLine = statement2str(IfStatement(prevState.maxLabel, op, l, r, [Label(gotoLabel)], [])) + "\n";
-    TranslatorState(prevState.src + newSrcTranslatedLine, gotoLabel, prevState.maxLabel);
-}
-
-choiceB2S(ops: [Operator], prevState: TranslatorState) -> TranslatorState {
-    opsStates = splitOperators(ops, prevState.maxLabel);
-    nextLabels = map(opsStates, \state -> state.maxLabel);
-    operatorsStartLabels = concat([prevState.maxLabel + 1], map(take(nextLabels, length(nextLabels) - 1), \label -> label + 1)); 
-    startChoice = statement2str(createTrueIfStatement(prevState.maxLabel, operatorsStartLabels)) + "\n";
-    operatorsSrc = makeSrcFromChoiceOperators(opsStates);
-
-    TranslatorState(
-        prevState.src 
-        + startChoice
-        + operatorsSrc,
-    opsStates[length(opsStates) - 1].maxLabel,
-    prevState.maxLabel
+makeIfStatement(label: int, goto: [int]) -> IfStatement {
+    IfStatement(label
+        , "=="
+        , Number(0)
+        , Number(0)
+        , map(goto, \id -> Label(id))
+        , []
     );
-}
-
-makeSrcFromChoiceOperators(opsStates: [TranslatorState]) -> string {
-    lastOperatorState = opsStates[length(opsStates) - 1];
-    end = lastOperatorState.maxLabel;
-    concatStrings(map(take(opsStates, length(opsStates) - 1), 
-        \state -> (state.src + statement2str(createTrueIfStatement(state.maxLabel, [end])) + "\n")))
-     + lastOperatorState.src;
-}
-
-createTrueIfStatement(label: int, goto: [int]) -> IfStatement {
-    //встроить ф\ю, переименовать
-    IfStatement(label, "==", Number(0), Number(0), map(goto, \id -> Label(id)), []);
 }
 
 splitOperators(ops: [Operator], prevLabel: int) -> [TranslatorState] {
-    //попробовать убрать tail и сделать пустой элемент
     fold(
         tail(ops),
         [B2S(ops[0], TranslatorState("", prevLabel + 1, prevLabel))],
-        \acc, nextOperator -> concat(acc, [B2S(nextOperator, TranslatorState("", acc[length(acc) - 1].maxLabel + 1, acc[length(acc) - 1].maxLabel))])
-    );
-    // преобразовать это
-}
-
-loopB2S(loopBody: Operator, prevState: TranslatorState) -> TranslatorState {
-    gotoLabel = prevState.maxLabel + 1;
-    translatedBody = B2S(loopBody, TranslatorState("", gotoLabel, prevState.maxLabel));
-    end = translatedBody.maxLabel;
-    startLoop = statement2str(createTrueIfStatement(prevState.maxLabel, [gotoLabel, end+1])) + "\n";
-    backToStart = statement2str(createTrueIfStatement(end, [prevState.maxLabel])) + "\n";
-    TranslatorState(
-        prevState.src + startLoop + translatedBody.src + backToStart,
-        end + 1,
-        prevState.maxLabel
+        \acc, nextOperator -> 
+                            concat(acc, [B2S(nextOperator, TranslatorState("", acc[length(acc) - 1].maxLabel + 1, acc[length(acc) - 1].maxLabel))])
     );
 }
 
