@@ -1,0 +1,8 @@
+import string;
+import lingo/pegcode/driver;
+import common/vnemo_runner;
+
+main() {
+    file_name = "test.vnemo";
+    runVNemo(str2VNemo(getFileContent(file_name)));
+}
