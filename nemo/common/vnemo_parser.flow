@@ -1,0 +1,39 @@
+import common/nemo_parser;
+export {
+
+Label                   (id: int);
+VNemo                   (a: [VariableDeclaration], b: [Statement]);
+
+Statement::= AssignmentStatement, IfStatement, PrintingStatement;
+    AssignmentStatement          (a: int, b: string, c: Expression, d: [Label]);
+    IfStatement                  (a: int, b: string, c: Expression, d: Expression, e: [Label], f: [Label]);
+    PrintingStatement            (a: int, b: Expression, c: [Label]);
+
+str2VNemo(str : string) -> VNemo;
+vNemo2str(vnemo : VNemo) -> string;
+statement2str(statement : Statement) -> string;
+label2str(label: Label) -> string;
+}
+
+str2VNemo(str : string) {
+	parsic(compilePegGrammar("#include lab13.lingo"), str, defaultPegActions);
+}
+
+vNemo2str(vnemo : VNemo) {
+    strGlue(map(vnemo.a, variableDeclaration2str), "\n") 
+    + "\n" + 
+    strGlue(map(vnemo.b, statement2str), "\n");
+}
+
+statement2str(statement : Statement) {
+	switch (statement) {
+		AssignmentStatement(a, b, c, d)        : i2s(a) + ": " + b + " := " + expr2str(c) + " goto {" + strGlue(map(d, label2str), ", ") + "}";
+		IfStatement(a, b, c, d, e, f)          : i2s(a) + ": " + "if " + expr2str(c) + " " + b + " " + expr2str(d) + " " + "then {" + 
+                                        strGlue(map(e, label2str), ",") + "}" + " else " + "{" + strGlue(map(f, label2str), ",") + "}";
+		PrintingStatement(a, b, c)             : i2s(a) + ": print(" + expr2str(b) + ") goto {" + strGlue(map(c, label2str), " ") + "}";
+	}
+}
+
+label2str(label: Label) {
+    i2s(label.id);
+}
