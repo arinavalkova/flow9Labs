@@ -4,11 +4,12 @@ import lingo/pegcode/driver;
 
 gram = "#include lab10.lingo"
 
-VarTree ::= VarNode, Number, Variable, Neg;
+VarTree ::= VarNode, Number, Variable, Neg, Fraction;
   VarNode(l: VarTree, op: string, r: VarTree);
   Number(num: double);
   Variable(var: string);
   Neg(num: VarTree);
+  Fraction(first: VarTree, second:VarTree);
 
 s2varTree(str: string) -> VarTree {
   parsic(compilePegGrammar(gram), str, defaultPegActions)
@@ -20,12 +21,13 @@ varTree2s(tree: VarTree) -> string {
         Neg(num) : "(-" + varTree2s(num) + ")";
         Number(val) : d2s(val);
         Variable(var) : var;
+        Fraction(f, s): "(" + varTree2s(f) + "/" + varTree2s(s) + ")";
     }
 }
 
 sumFunction(l: VarTree, r:VarTree) -> VarTree {
     switch(l) {
-            Number(val_l) : {
+        Number(val_l) : {
             if (val_l == 0.0) {
                 r;
             }
@@ -42,6 +44,55 @@ sumFunction(l: VarTree, r:VarTree) -> VarTree {
                     default : {
                         VarNode(l, "+", r);
                     }
+                }
+            }
+        }
+        Fraction(left, right) : {
+            switch (left) {
+                Number(l_num) : {
+                    switch (r) {
+                        Fraction(r_left, r_right) : {
+                            switch (r_left) {
+                                Number(r_left_num) : {
+                                    switch (right) {
+                                        Number(r_num) : {
+                                            switch (r_right) {
+                                                Number(r_right_num) : {
+                                                    if (r_num == r_right_num) {
+                                                        Fraction(Number(l_num + r_left_num), r_right);
+                                                    } else {
+                                                        VarNode(l, "+", r);
+                                                    }
+                                                }
+                                                default : {
+                                                    VarNode(l, "+", r);
+                                                }
+                                            }
+                                        }
+                                        default : {
+                                            VarNode(l, "+", r);
+                                        }
+                                    }
+                                }
+                                default : {
+                                    VarNode(l, "+", r);
+                                }
+                            }
+                        }
+                        Number(num) : {
+                            if (num == 0.0) {
+                                l;
+                            } else {
+                                 VarNode(l, "+", r);
+                            }
+                        }
+                        default : {
+                            VarNode(l, "+", r);
+                        }
+                    }
+                }
+                default : {
+                    VarNode(l, "+", r);
                 }
             }
         }
@@ -65,7 +116,7 @@ sumFunction(l: VarTree, r:VarTree) -> VarTree {
    
 mulFunction(l: VarTree, r: VarTree) -> VarTree {
     switch (l) {
-            Number(val_l) : {
+        Number(val_l) : {
             if (val_l == 0.0) {
                 Number(0.0);
             }
@@ -75,20 +126,85 @@ mulFunction(l: VarTree, r: VarTree) -> VarTree {
             else {
                 switch (r) {
                     Number(val_r) : {
-                    if (val_r == 0.0) {
-                       Number(0.0);
+                        if (val_r == 0.0) {
+                        Number(0.0);
+                        }
+                        else if (val_r == 1.0) {
+                            l;
+                        }
+                        else {
+                            VarNode(l, "*", r);
+                        }
+                    } 
+                    Fraction(left, right) : {
+                        switch (left) {
+                            Number(left_num) : {
+                                switch (right) {
+                                    Number(right_num) : {
+                                        Fraction(Number(val_l * left_num), Number(right_num));
+                                    }
+                                    default : {
+                                        VarNode(l, "*", r);
+                                    }
+                                }
+                            }
+                            default : {
+                                VarNode(l, "*", r);
+                            }
+                        }
                     }
-                    else if (val_r == 1.0) {
-                        l;
-                    }
-                    else {
+                    default : {
                         VarNode(l, "*", r);
+                    }
+                }
+            }
+        }
+        Fraction(left, right) : {
+            switch (left) {
+                Number(l_num) : {
+                    switch (r) {
+                        Fraction(r_left, r_right) : {
+                            switch (r_left) {
+                                Number(r_left_num) : {
+                                    switch (right) {
+                                        Number(r_num) : {
+                                            switch (r_right) {
+                                                Number(r_right_num) : {
+                                                    Fraction(Number(l_num * r_left_num), Number(r_num * r_right_num));
+                                                }
+                                                default : {
+                                                    VarNode(l, "*", r);
+                                                }
+                                            }
+                                        }
+                                        default : {
+                                            VarNode(l, "*", r);
+                                        }
+                                    }
+                                }
+                                default : {
+                                    VarNode(l, "*", r);
+                                }
+                            }
+                        }
+                        Number(num) : {
+                            switch (right) {
+                                Number(r_num) : {
+                                    Fraction(Number(num * l_num), Number(r_num));
+                                }
+                                default : {
+                                     VarNode(l, "*", r);
+                                }
+                            }
+                        }
+                        default : {
+                            VarNode(l, "*", r);
+                        }
                     }
                 }
                 default : {
                     VarNode(l, "*", r);
                 }
-            }
             }
         }
         default : {
@@ -114,7 +230,7 @@ mulFunction(l: VarTree, r: VarTree) -> VarTree {
 
 divFunction(l: VarTree, r: VarTree) -> VarTree {
     switch(l) {
-            Number(val_l): {
+        Number(val_l): {
             if (val_l == 0.0) {
                 Number(0.0);
             }
@@ -128,16 +244,74 @@ divFunction(l: VarTree, r: VarTree) -> VarTree {
                             VarNode(l, "/", r);
                         }
                     }
-                    VarNode(a, op, b) : {
-                        if (op == "/") {
-                            divFunction(VarNode(l, "*", b), a);
-                        } else {
-                            VarNode(a, op, b);
+                    Fraction(left, right) : {
+                        switch (left) {
+                            Number(left_num) : {
+                                switch (right) {
+                                    Number(right_num) : {
+                                        Fraction(Number(val_l * right_num), Number(left_num));
+                                    }
+                                    default : {
+                                        VarNode(l, "/", r);
+                                    }
+                                }
+                            }
+                            default : {
+                                VarNode(l, "/", r);
+                            }
                         }
                     }
                     default : {
                         VarNode(l, "/", r);
                     }
+                }
+            }
+        }
+        Fraction(left, right) : {
+            switch (left) {
+                Number(l_num) : {
+                    switch (r) {
+                        Fraction(r_left, r_right) : {
+                            switch (r_left) {
+                                Number(r_left_num) : {
+                                    switch (right) {
+                                        Number(r_num) : {
+                                            switch (r_right) {
+                                                Number(r_right_num) : {
+                                                    Fraction(Number(l_num * r_right_num), Number(r_num * r_left_num));
+                                                }
+                                                default : {
+                                                    VarNode(l, "/", r);
+                                                }
+                                            }
+                                        }
+                                        default : {
+                                            VarNode(l, "/", r);
+                                        }
+                                    }
+                                }
+                                default : {
+                                    VarNode(l, "/", r);
+                                }
+                            }
+                        }
+                        Number(num) : {
+                            switch (right) {
+                                Number(r_num) : {
+                                    Fraction(Number(l_num), Number(r_num * num));
+                                }
+                                default : {
+                                     VarNode(l, "/", r);
+                                }
+                            }
+                        }
+                        default : {
+                            VarNode(l, "/", r);
+                        }
+                    }
+                }
+                default : {
+                    VarNode(l, "/", r);
                 }
             }
         }
@@ -151,13 +325,23 @@ divFunction(l: VarTree, r: VarTree) -> VarTree {
                         VarNode(l, "/", r);
                     }
                 }
-                VarNode(a, op, b) : {
-                    if (op == "/") {
-                        divFunction(VarNode(l, "*", b), a);
-                    } else {
-                        VarNode(a, op, b);
+                Fraction(left, right) : {
+                        switch (left) {
+                            Number(left_num) : {
+                                switch (right) {
+                                    Number(right_num) : {
+                                        VarNode(VarNode(l, "*", Number(right_num)), "/", Number(left_num));
+                                    }
+                                    default : {
+                                        VarNode(l, "/", r);
+                                    }
+                                }
+                            }
+                            default : {
+                                VarNode(l, "/", r);
+                            }
+                        }
                     }
-                }
                 default: {
                     VarNode(l, "/", r);
                 }
@@ -185,6 +369,61 @@ difFunction(l: VarTree, r: VarTree) -> VarTree {
                     default: {
                         VarNode(l, "-", r);
                     }
+                }
+            }
+        }
+        Fraction(left, right) : {
+            switch (left) {
+                Number(l_num) : {
+                    switch (r) {
+                        Fraction(r_left, r_right) : {
+                            switch (r_left) {
+                                Number(r_left_num) : {
+                                    switch (right) {
+                                        Number(r_num) : {
+                                            switch (r_right) {
+                                                Number(r_right_num) : {
+                                                    if (r_num == r_right_num) {
+                                                        if (l_num - r_left_num < 0.0) {
+                                                            Neg(Fraction(Number(r_left_num - l_num), r_right));
+                                                        } else if (l_num - r_left_num > 0.0) {
+                                                             Fraction(Number(l_num - r_left_num), r_right);
+                                                        } else {
+                                                            Number(0.0);
+                                                        }
+                                                    } else {
+                                                        VarNode(l, "-", r);
+                                                    }
+                                                }
+                                                default : {
+                                                    VarNode(l, "-", r);
+                                                }
+                                            }
+                                        }
+                                        default : {
+                                            VarNode(l, "-", r);
+                                        }
+                                    }
+                                }
+                                default : {
+                                    VarNode(l, "-", r);
+                                }
+                            }
+                        }
+                        Number(num) : {
+                            if (num == 0.0) {
+                                l;
+                            } else {
+                                 VarNode(l, "-", r);
+                            }
+                        }
+                        default : {
+                            VarNode(l, "-", r);
+                        }
+                    }
+                }
+                default : {
+                    VarNode(l, "-", r);
                 }
             }
         }
@@ -231,6 +470,49 @@ degFunction(l: VarTree, r: VarTree) -> VarTree {
                     default: {
                         VarNode(l, "^", r); 
                     }
+                }
+            }
+        }
+        Fraction(left, right) : {
+            switch (left) {
+                Number(left_num) : {
+                    switch (right) {
+                        Number(right_num) : {
+                            switch (r) {
+                                Number(r_num) : {
+                                    Fraction(Number(dpow(left_num, r_num)), Number(dpow(right_num, r_num)));
+                                }
+                                Fraction(left2, right2) : {
+                                    switch (left2) {
+                                        Number(left2_num) : {
+                                            switch (right2) {
+                                                Number(right2_num) : {
+                                                    Fraction(
+                                                      Number(dpow(left_num, left2_num / right2_num))
+                                                    , Number(dpow(right_num, left2_num / right2_num)));
+                                                }
+                                                default : {
+                                                    VarNode(l, "^", r);
+                                                }
+                                            }
+                                        }
+                                        default : {
+                                            VarNode(l, "^", r);
+                                        }
+                                    }
+                                }
+                                default : {
+                                    VarNode(l, "^", r);
+                                }
+                            }
+                        }
+                        default : {
+                            VarNode(l, "^", r);
+                        }
+                    }
+                }
+                default : {
+                    VarNode(l, "^", r);
                 }
             }
         }
@@ -291,6 +573,31 @@ simplifyVarTree (tree: VarTree) -> VarTree {
         }
         Number(val) : Number(val);
         Variable(name) : Variable(name);
+        Fraction(left, right) : {
+            switch (left) {
+                Number(left_num) : {
+                    if (left_num == 0.0) {
+                        Number(0.0);
+                    } else {
+                        switch (right) {
+                            Number(right_num) : {
+                                if (left_num == right_num) {
+                                    Number(1.0);
+                                } else {
+                                    Fraction(left, right);
+                                }
+                            }
+                            default : {
+                                Fraction(left, right);
+                            }
+                        }
+                    }
+                }
+                default : {
+                    Fraction(left, right);
+                }
+            }
+        }
     }
 }
 
@@ -334,16 +641,18 @@ varTree2iVariable(tree: VarTree, vars: Tree<string, double>) -> Maybe<double> {
                     }
                 }
                 Neg(num2) : varTree2iVariable(num2, vars);
+                Fraction(f, s): maybeBind2(\x, y -> operation(x, "/", y))(varTree2iVariable(f, vars), varTree2iVariable(s, vars));
             }
         }
         Variable(var) : lookupTree(vars, var)
+        Fraction(f, s): maybeBind2(\x, y -> operation(x, "/", y))(varTree2iVariable(f, vars), varTree2iVariable(s, vars));
     }
 }
 
 main() {
     line = getUrlParameter("line");
-    varsTree = fold(getAllUrlParametersArray(), makeTree(), \tree, var ->{
-        if(var[0] == "line")
+    varsTree = fold(getAllUrlParametersArray(), makeTree(), \tree, var -> {
+        if (var[0] == "line")
             tree
         else
             setTree(tree, var[0], s2d(var[1]))
